@@ -52,7 +52,7 @@ def transformFullTextResults(subtitle):
         "userRank" : ranks[subtitle["UserRank"].upper().replace(" ","")],
         "downloadCount" : normalizeDownloadCount(int(subtitle["SubDownloadsCnt"])),
         "rating" : normalizeRating(float(subtitle["SubRating"])),
-        "link" : subtitle["ZipDownloadLink"]
+        "link" : subtitle["SubDownloadLink"]
     }
 
 def exactSearch(os_client, file_name, token, language):       
@@ -64,12 +64,18 @@ def exactSearch(os_client, file_name, token, language):
         }
     ])
 
-    subtitle_data = toJson(results)
-    return subtitle_data["data"].sort(key=sortByScore,reverse=True)[0]["ZipDownloadLink"]
+    subtitle_data = toJson(results)["data"]
+
+    if (len(subtitle_data) > 0):
+        subtitle_data.sort(key=sortByScore,reverse=True)
+        return subtitle_data[0]["SubDownloadLink"]
+    else:
+        return "NO_SUBTITLES" 
 
 
 def searchByAttributeRanking(e):
-    return e["userRank"] * 100 + e["downloadCount"] * 10 + e["rating"]
+    key = e["rating"] * 100 + e["downloadCount"] * 10 + e["userRank"]
+    return key
 
 def textSearch(os_client, file_name, token, language):
     basename = os.path.basename(file_name)
@@ -79,6 +85,10 @@ def textSearch(os_client, file_name, token, language):
             "sublanguageid" :  language
         }
     ])
-
     transformed_results = [ transformFullTextResults(x) for x in results["data"] if x["SubFromTrusted"] == "1" ]
-    return transformed_results.sort(key=searchByAttributeRanking,reverse=True)[0]["link"]
+
+    if (len(transformed_results) > 0):
+        transformed_results.sort(key=searchByAttributeRanking,reverse=True)
+        return transformed_results[0]["link"]
+    else:
+        return "NO_SUBTITLES"
